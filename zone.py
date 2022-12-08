@@ -4,7 +4,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 from upscale import upscale_nn
-import os
 
 video = cv.VideoCapture("vid.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
@@ -13,7 +12,6 @@ seconds = round(frames / fps, 1)
 
 startX, startY = 0, 0
 endX, endY = 0, 0
-i = 1
 rect = False
 
 def coords(event,mouseX,mouseY, flags, param):
@@ -33,19 +31,16 @@ def draw_rectangle():
     
 
 def cutting():
-    global rect, i
+    global rect
     if rect == True:   
-        #cv.imwrite(f"frame{i}.png", frame)
-        im = Image.fromarray(frame)
-        cut = im.crop((startX+2, startY+2, endX-1, endY-1))
-        cut_img = np.array(cut)
+        #im = Image.fromarray(frame)
+        #cut = im.crop((startX+2, startY+2, endX-1, endY-1))
+        cut_img = frame[startY+1:endY-1, startX+1:endX-1]
+        #cut_img = np.array(cut)
         result = upscale_nn(cut_img)
+        #cv.imshow("cut",cut)
         plt.imshow(result[:,:,::-1])
-        plt.show()
-        #cut_img.save(f"cut_img{i}.png")
-        #os.remove(f"frame{i}.png")
-        i = i+1      
-          
+        plt.show()     
     else:
         rect = False    
 
@@ -63,13 +58,6 @@ while(True):
     if k == 27:
         break
     if k == ord("p"):
-        #current_sec = time.time() -timer
-        #print(f"TIME: {0 + (current_sec)}")
-        #frame_id = int(frames/current_sec)
-        #print(cv.CAP_PROP_POS_FRAMES)
-        #print(frame_id)
-        #video.set(cv.CAP_PROP_POS_FRAMES, frame_id)
-        #ret, frame = video.read())
         cutting()
         cv.waitKey(-1)
         
