@@ -3,6 +3,7 @@ import time
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
+import multiprocessing
 from upscale import upscale_nn
 
 video = cv.VideoCapture("vid.mp4")
@@ -13,6 +14,8 @@ seconds = round(frames / fps, 1)
 startX, startY = 0, 0
 endX, endY = 0, 0
 rect = False
+cut_img = 0
+
 
 def coords(event,mouseX,mouseY, flags, param):
     global startX, startY, endX, endY 
@@ -30,36 +33,49 @@ def draw_rectangle():
     else: rect = False    
     
 
-def cutting():
+"""def cutting():
     global rect
     if rect == True:   
-        #im = Image.fromarray(frame)
-        #cut = im.crop((startX+2, startY+2, endX-1, endY-1))
         cut_img = frame[startY+1:endY-1, startX+1:endX-1]
-        #cut_img = np.array(cut)
-        result = upscale_nn(cut_img)
-        #cv.imshow("cut",cut)
-        plt.imshow(result[:,:,::-1])
-        plt.show()     
+        pool.apply_async(upscale_nn, args=(cut_img), callback=callbacking)
+        return cut_img
     else:
-        rect = False    
+        rect = False"""
+
+def callbacking():
+    global cut_img, rect
+    if rect == True:
+        cut_img = frame[startY+1:endY-1, startX+1:endX-1]
+        pool.apply_async(upscale_nn, args=(cut_img,))
+    if res.ready():
+        plt.clf()
+        plt.imshow(res.get()[:,:,::-1])    
+        plt.show()
+
+ret, first_frame = video.read()
+cut_img = first_frame[0:40, 0:40]
+if __name__=="__main__":
+    pool = multiprocessing.Pool(processes=3)
+    res = pool.apply_async(upscale_nn, args=(cut_img,), callback=callbacking)
+    while(True):
+        ret, frame = video.read()
+
+        cv.namedWindow('Frame')
+        cv.setMouseCallback('Frame',coords)
+        draw_rectangle()
+        callbacking()
+        cv.imshow('Frame',frame)
+        k = cv.waitKey(round(1000/fps)) 
+        if k == 27:
+            break
+        if k == ord("p"):
+            cv.waitKey(-1)
 
 
-timer = time.time() 
-while(True):
-    ret, frame = video.read()
 
-    cv.namedWindow('Frame')
-    cv.setMouseCallback('Frame',coords)
-    draw_rectangle()
-    #cutting()
-    cv.imshow('Frame',frame)
-    k = cv.waitKey(round(1000/fps)) 
-    if k == 27:
-        break
-    if k == ord("p"):
-        cutting()
-        cv.waitKey(-1)
-        
+            
 
 cv.destroyAllWindows()
+
+
+# перший фрейм для async, callback 
