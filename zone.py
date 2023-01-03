@@ -18,6 +18,18 @@ res = 0
 old_res = 0
 k = 0
 
+tracker = cv.TrackerCSRT_create()
+tracker_flag = False
+
+def track_object_init(fr, bb):
+    """Відслідковує об'єкт та оновлює 
+    рамку навколо нього
+    """
+    global tracker, tracker_flag
+    tracker.init(fr,bb)
+    tracker_flag = True
+
+
 # Функція знаходження координат виділеної зони
 def coords(event,mouseX,mouseY, flags, param):
     global startX, startY, endX, endY 
@@ -25,6 +37,9 @@ def coords(event,mouseX,mouseY, flags, param):
         startX, startY = mouseX,mouseY
     elif event == cv.EVENT_LBUTTONUP:
         endX, endY = mouseX, mouseY
+        if ret: #якщо кадр зчитано вдало
+            bb = (startX, startY, endX, endY)
+            track_object_init(frame, bb)
     return (startX, startY, endX, endY)
 
 # Функція малювання прямокутника по заданим координатам
@@ -45,7 +60,7 @@ def draw_rectangle():
         plt.show()
     else:
         rect = False """
-# Фукнція для роботи асинхронної обробки зображення 
+# Фукнція для роботи асинхронного апскейлу зображення 
 def callbacking(temp_res):
     global cut_img, rect, res
     if rect == True:
@@ -72,9 +87,9 @@ def show_result():
                     cv.destroyWindow('Upscaled')
                     break
 
-ret, first_frame = video.read()
-cut_img = first_frame[0:40, 0:40]
 if __name__=="__main__":
+    ret, first_frame = video.read()
+    cut_img = first_frame[0:40, 0:40]
     pool = multiprocessing.Pool(processes=3)
     res = pool.apply_async(upscale_nn, args=(cut_img,), callback=callbacking)
     t = td.Thread(target = show_result)
@@ -83,6 +98,12 @@ if __name__=="__main__":
         ret, frame = video.read()
         cv.namedWindow('Frame')
         cv.setMouseCallback('Frame',coords)
+        if tracker_flag:
+            (success, box) = tracker.update(frame)
+            if success:
+                startX, startY, \
+                endX, endY  = [int(x) for x in box]
+    
         draw_rectangle()
         cv.imshow('Frame',frame)
         k=cv.waitKey(round(1000/fps)) 
