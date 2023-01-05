@@ -4,6 +4,7 @@ import numpy as np
 import multiprocessing
 import threading as td
 from upscale import upscale_nn
+import dlib
 
 video = cv.VideoCapture("vid.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
@@ -17,6 +18,13 @@ cut_img = 0
 res = 0
 old_res = 0
 k = 0
+tracker = dlib.correlation_tracker()
+track_flag = False
+
+def tracking(frame, box):
+    global tracker, track_flag
+    tracker.start_track(frame, box)
+    track_flag = True
 
 # Функція знаходження координат виділеної зони
 def coords(event,mouseX,mouseY, flags, param):
@@ -25,6 +33,9 @@ def coords(event,mouseX,mouseY, flags, param):
         startX, startY = mouseX,mouseY
     elif event == cv.EVENT_LBUTTONUP:
         endX, endY = mouseX, mouseY
+        if ret:
+            box = dlib.rectangle(startX, startY, endX, endY)
+            tracking(frame, box)
     return (startX, startY, endX, endY)
 
 # Функція малювання прямокутника по заданим координатам
@@ -36,15 +47,6 @@ def draw_rectangle():
     else: rect = False    
     
 
-"""def cutting():
-    global rect
-    if rect == True:   
-        cut_img = frame[startY+1:endY-1, startX+1:endX-1]
-        result = upscale_nn(cut_img)
-        plt.imshow(result[:,:,::-1])    
-        plt.show()
-    else:
-        rect = False """
 # Фукнція для роботи асинхронної обробки зображення 
 def callbacking(temp_res):
     global cut_img, rect, res
@@ -72,19 +74,36 @@ def show_result():
                     cv.destroyWindow('Upscaled')
                     break
 
-ret, first_frame = video.read()
-cut_img = first_frame[0:40, 0:40]
+
 if __name__=="__main__":
+    ret, first_frame = video.read()
+    cut_img = first_frame[0:40, 0:40]
+
+    """first_frame = cv.cvtColor(first_frame, cv.COLOR_BGR2GRAY)
+    otsu_threshold, image_result = cv.threshold(
+    first_frame, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU,)"""
+
     pool = multiprocessing.Pool(processes=3)
     res = pool.apply_async(upscale_nn, args=(cut_img,), callback=callbacking)
-    t = td.Thread(target = show_result)
+    t = td.Thread(target=show_result)
     t.start()
     while True:
         ret, frame = video.read()
         cv.namedWindow('Frame')
-        cv.setMouseCallback('Frame',coords)
+        cv.setMouseCallback('Frame', coords)
+        if track_flag:
+            pos = tracker.get_position()
+            startX = int(pos.left())
+            startY = int(pos.top())
+            endX = int(pos.right())
+            endY = int(pos.bottom())
+            cv.rectangle(frame, (startX, startY), (endX, endY),
+                          (0, 255, 0), 2)
+            #print(pos)
+            tracker.update(frame)
         draw_rectangle()
-        cv.imshow('Frame',frame)
+        cv.imshow('Frame', frame)
+        #cv.imshow("Otsu", image_result)
         k=cv.waitKey(round(1000/fps)) 
         if k == 27:
             break
@@ -92,9 +111,4 @@ if __name__=="__main__":
             cv.waitKey(-1)
 
 
-            
-
 cv.destroyAllWindows()
-
-
-# перший фрейм для async, callback 
