@@ -6,7 +6,7 @@ import threading as td
 from upscale import upscale_nn
 import dlib
 
-video = cv.VideoCapture("vid.mp4")
+video = cv.VideoCapture("tank.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
 seconds = round(frames / fps, 1)
@@ -21,6 +21,13 @@ k = 0
 tracker = dlib.correlation_tracker()
 track_flag = False
 
+def cropping_rect(startX, startY, endX, endY, koef=0.25):
+    """Функція для зменшення прямокутника, з подальшим передавання координат у трекер"""
+    lenX = endX - startX
+    lenY = endY - startY
+    lenX = lenX * koef
+    lenY = lenY * koef
+    return (lenX, lenY)
 def tracking(frame, box):
     global tracker, track_flag
     tracker.start_track(frame, box)
@@ -34,7 +41,8 @@ def coords(event,mouseX,mouseY, flags, param):
     elif event == cv.EVENT_LBUTTONUP:
         endX, endY = mouseX, mouseY
         if ret:
-            box = dlib.rectangle(startX, startY, endX, endY)
+            lenX, lenY = cropping_rect(startX, startY, endY, endY)
+            box = dlib.rectangle(int(startX + lenX), int(startY+lenY), int(endX-lenX), int(endY-lenY))
             tracking(frame, box)
     return (startX, startY, endX, endY)
 
@@ -97,9 +105,8 @@ if __name__=="__main__":
             startY = int(pos.top())
             endX = int(pos.right())
             endY = int(pos.bottom())
-            cv.rectangle(frame, (startX, startY), (endX, endY),
-                          (0, 255, 0), 2)
-            #print(pos)
+            lenX, lenY = cropping_rect(startX, startY, endY, endY)
+            cv.rectangle(frame, (int(startX+ lenX), int(startY+ lenY)), (int(endX - lenX), int(endY-lenY)), (0, 255, 0), 2)
             tracker.update(frame)
         draw_rectangle()
         cv.imshow('Frame', frame)
