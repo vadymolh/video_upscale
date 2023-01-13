@@ -6,9 +6,11 @@ import threading as td
 from upscale import upscale_nn
 import dlib
 
-video = cv.VideoCapture("tank.mp4")
+video = cv.VideoCapture("vid.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
+fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
+fr_height = video.get(cv.CAP_PROP_FRAME_HEIGHT)
 seconds = round(frames / fps, 1)
 
 startX, startY = 0, 0
@@ -27,7 +29,7 @@ def cropping_rect(startX, startY, endX, endY, koef=0.25):
     lenY = endY - startY
     lenX = lenX * koef
     lenY = lenY * koef
-    return (lenX, lenY)
+    return (int(lenX), int(lenY))
 def tracking(frame, box):
     global tracker, track_flag
     tracker.start_track(frame, box)
@@ -82,6 +84,10 @@ def show_result():
                     cv.destroyWindow('Upscaled')
                     break
 
+def is_border(startX, startY, endX, endY):
+    if startX < 15 or startY<15 or endX > fr_width-15 or endY> fr_height-15:
+        return True
+    return False
 
 if __name__=="__main__":
     ret, first_frame = video.read()
@@ -99,15 +105,17 @@ if __name__=="__main__":
         ret, frame = video.read()
         cv.namedWindow('Frame')
         cv.setMouseCallback('Frame', coords)
-        if track_flag:
-            pos = tracker.get_position()
-            startX = int(pos.left())
-            startY = int(pos.top())
-            endX = int(pos.right())
-            endY = int(pos.bottom())
-            lenX, lenY = cropping_rect(startX, startY, endY, endY)
-            cv.rectangle(frame, (int(startX+ lenX), int(startY+ lenY)), (int(endX - lenX), int(endY-lenY)), (0, 255, 0), 2)
+        if track_flag and not is_border(startX, startY, endY, endY):
             tracker.update(frame)
+            pos = tracker.get_position()
+            X1 = int(pos.left()) 
+            Y1 = int(pos.top()) 
+            X2 = int(pos.right())
+            Y2 = int(pos.bottom())
+            lenX, lenY = cropping_rect(startX, startY, endY, endY)
+            # малюємо внутрішній прямокутник
+            cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (0, 255, 0), 2)
+            startX, startY, endX, endY = X1-lenX, Y1-lenY, X2+lenX, Y2+lenY
         draw_rectangle()
         cv.imshow('Frame', frame)
         #cv.imshow("Otsu", image_result)
