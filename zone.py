@@ -5,6 +5,7 @@ import multiprocessing
 import threading as td
 from upscale import upscale_nn
 import dlib
+import math
 
 video = cv.VideoCapture("vid.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
@@ -27,6 +28,8 @@ def cropping_rect(startX, startY, endX, endY, koef=0.25):
     """Функція для зменшення прямокутника, з подальшим передавання координат у трекер"""
     lenX = endX - startX
     lenY = endY - startY
+    lenX = math.fabs(endX - startX)
+    lenY = math.fabs(endY - startY)
     lenX = lenX * koef
     lenY = lenY * koef
     return (int(lenX), int(lenY))
