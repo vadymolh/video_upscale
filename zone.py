@@ -4,6 +4,7 @@ import numpy as np
 import multiprocessing
 import threading as td
 from upscale import upscale_nn
+from detection import detectVehicleCoords
 import dlib
 import math
 
@@ -16,6 +17,7 @@ seconds = round(frames / fps, 1)
 
 startX, startY = 0, 0
 endX, endY = 0, 0
+lenX, lenY = 0, 0
 rect = False
 cut_img = 0
 res = 0
@@ -26,13 +28,17 @@ track_flag = False
 
 def cropping_rect(startX, startY, endX, endY, koef=0.25):
     """Функція для зменшення прямокутника, з подальшим передавання координат у трекер"""
-    lenX = endX - startX
-    lenY = endY - startY
-    lenX = math.fabs(endX - startX)
-    lenY = math.fabs(endY - startY)
-    lenX = lenX * koef
-    lenY = lenY * koef
-    return (int(lenX), int(lenY))
+    global frame
+    cv.imshow("Crop Image", frame[startY:endY, startX:endX+int(endX*koef)])
+    x1,y1,x2,y2 = detectVehicleCoords(frame[startY:endY, startX:endX+int(endX*koef)])
+    #lenX = endX - startX
+    #lenY = endY - startY
+    #lenX = math.fabs(endX - startX)
+    #lenY = math.fabs(endY - startY)
+    #lenX = lenX * koef
+    #lenY = lenY * koef
+    res = ( startX-x1 , startY-y1, startX-x2, startY-y2)
+    return res
 def tracking(frame, box):
     global tracker, track_flag
     tracker.start_track(frame, box)
@@ -40,14 +46,22 @@ def tracking(frame, box):
 
 # Функція знаходження координат виділеної зони
 def coords(event,mouseX,mouseY, flags, param):
-    global startX, startY, endX, endY 
+    global startX, startY, endX, endY, lenX, lenY
     if event == cv.EVENT_LBUTTONDOWN:
         startX, startY = mouseX,mouseY
     elif event == cv.EVENT_LBUTTONUP:
         endX, endY = mouseX, mouseY
-        if ret:
-            lenX, lenY = cropping_rect(startX, startY, endY, endY)
-            box = dlib.rectangle(int(startX + lenX), int(startY+lenY), int(endX-lenX), int(endY-lenY))
+        if True:
+            trX1, trY1 , trX2, trY2 = cropping_rect(startX, startY, endY, endY)
+            #box = dlib.rectangle(int(startX + lenX), int(startY+lenY), int(endX-lenX), int(endY-lenY))
+            box = dlib.rectangle(trX1, trY1 , trX2, trY2)
+            print("Track rect")
+            print(trX1, trY1 , trX2, trY2)
+            print("Neuron rect")
+            print(startX, startY, endX, endY)
+            lenX, lenY = int(math.fabs(trX1-startX)), int(math.fabs(trY1-startY))
+            print("dx dy")
+            print(lenX, lenY)
             tracking(frame, box)
     return (startX, startY, endX, endY)
 
@@ -115,10 +129,13 @@ if __name__=="__main__":
             Y1 = int(pos.top()) 
             X2 = int(pos.right())
             Y2 = int(pos.bottom())
-            lenX, lenY = cropping_rect(startX, startY, endY, endY)
+            print("TRACK UPDATE")
+            #lenX, lenY = cropping_rect(startX, startY, endY, endY)
             # малюємо внутрішній прямокутник
             cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (0, 255, 0), 2)
-            startX, startY, endX, endY = X1-lenX, Y1-lenY, X2+lenX, Y2+lenY
+            dx, dy = (X1-startX)-lenX, (Y1-startY)-lenY
+            startX, startY, endX, endY = startX+dx, startY+dy, endX+dx, endY+dy
+            #startX, startY, endX, endY = X1-lenX, Y1-lenY, X2+lenX, Y2+lenY
         draw_rectangle()
         cv.imshow('Frame', frame)
         #cv.imshow("Otsu", image_result)
