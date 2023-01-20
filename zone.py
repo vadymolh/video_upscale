@@ -8,11 +8,12 @@ from detection import detectVehicleCoords
 import dlib
 import math
 
-video = cv.VideoCapture("vid.mp4")
+video = cv.VideoCapture("car.MP4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
 fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
 fr_height = video.get(cv.CAP_PROP_FRAME_HEIGHT)
+if not fps: fps=30
 seconds = round(frames / fps, 1)
 
 startX, startY = 0, 0
@@ -97,11 +98,7 @@ def show_result():
         if isinstance(res, np.ndarray):
             if not np.array_equal(res, old_res):
                 im = res[:,:,::-1]
-                width = int(im.shape[1]*0.4)
-                height = int(im.shape[0]*0.4)
-                size = (width, height)
-                resized_im = cv.resize(im, size)
-                cv.imshow('Upscaled',resized_im)
+                cv.imshow('Upscaled',im)
                 k = cv.waitKey(1)
                 old_res = res
                 if k == 27:
@@ -137,7 +134,6 @@ if __name__=="__main__":
             Y1 = int(pos.top()) 
             X2 = int(pos.right())
             Y2 = int(pos.bottom())
-            print("TRACK UPDATE")
             #lenX, lenY = cropping_rect(startX, startY, endY, endY)
             # малюємо внутрішній прямокутник
             cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (255, 0), 2)
