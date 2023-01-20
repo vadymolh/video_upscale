@@ -8,7 +8,7 @@ from detection import detectVehicleCoords
 import dlib
 import math
 
-video = cv.VideoCapture("tank.mp4")
+video = cv.VideoCapture("vid.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
 fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
@@ -31,7 +31,7 @@ new_zone = False
 def cropping_rect(startX, startY, endX, endY, koef=0.25):
     """Функція для зменшення прямокутника, з подальшим передавання координат у трекер"""
     global frame
-    cv.imshow("Crop Image", clear_frame[startY:endY, startX:endX+int(endX*koef)])
+    #cv.imshow("Crop Image", clear_frame[startY:endY, startX:endX+int(endX*koef)])
     x1,y1,x2,y2 = detectVehicleCoords(clear_frame[startY:endY, startX:endX+int(endX*koef)])
     #lenX = endX - startX
     #lenY = endY - startY
@@ -61,14 +61,7 @@ def coords(event,mouseX,mouseY, flags, param):
             trX1, trY1 , trX2, trY2 = cropping_rect(startX, startY, endY, endY)
             #box = dlib.rectangle(int(startX + lenX), int(startY+lenY), int(endX-lenX), int(endY-lenY))
             box = dlib.rectangle(trX1, trY1 , trX2, trY2)
-            print("Track rect")
-            print(trX1, trY1 , trX2, trY2)
-            print("Neuron rect")
-            print(startX, startY, endX, endY)
             lenX, lenY = int(math.fabs(trX1-startX)), int(math.fabs(trY1-startY))
-            print("dx dy")
-            print(lenX, lenY)
-            print("BOX: ", box)
             tracking(param, box)
         new_zone = False
     return (startX, startY, endX, endY)
