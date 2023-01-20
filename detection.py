@@ -45,4 +45,6 @@ def detectVehicleCoords(image)->tuple:
     else:
         print ("no contours")
         return (0,0,0,0)
-    return x,y, w, h
+    print(f"Width:{w}  Height: {h}")
+    print (x,y, x+w, y+h)
+    return x,y, x+w, y+h

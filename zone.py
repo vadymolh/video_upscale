@@ -38,7 +38,7 @@ def cropping_rect(startX, startY, endX, endY, koef=0.25):
     #lenY = math.fabs(endY - startY)
     #lenX = lenX * koef
     #lenY = lenY * koef
-    res = ( startX-x1 , startY-y1, startX-x2, startY-y2)
+    res = ( startX+x1 , startY+y1, startX+x2, startY+y2)
     return res
 def tracking(frame, box):
     global tracker, track_flag
@@ -67,6 +67,7 @@ def coords(event,mouseX,mouseY, flags, param):
             lenX, lenY = int(math.fabs(trX1-startX)), int(math.fabs(trY1-startY))
             print("dx dy")
             print(lenX, lenY)
+            print("BOX: ", box)
             tracking(param, box)
         new_zone = False
     return (startX, startY, endX, endY)
