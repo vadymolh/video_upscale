@@ -25,12 +25,13 @@ old_res = 0
 k = 0
 tracker = dlib.correlation_tracker()
 track_flag = False
+new_zone = False
 
 def cropping_rect(startX, startY, endX, endY, koef=0.25):
     """Функція для зменшення прямокутника, з подальшим передавання координат у трекер"""
     global frame
-    cv.imshow("Crop Image", frame[startY:endY, startX:endX+int(endX*koef)])
-    x1,y1,x2,y2 = detectVehicleCoords(frame[startY:endY, startX:endX+int(endX*koef)])
+    cv.imshow("Crop Image", clear_frame[startY:endY, startX:endX+int(endX*koef)])
+    x1,y1,x2,y2 = detectVehicleCoords(clear_frame[startY:endY, startX:endX+int(endX*koef)])
     #lenX = endX - startX
     #lenY = endY - startY
     #lenX = math.fabs(endX - startX)
@@ -46,10 +47,14 @@ def tracking(frame, box):
 
 # Функція знаходження координат виділеної зони
 def coords(event,mouseX,mouseY, flags, param):
-    global startX, startY, endX, endY, lenX, lenY
+    global startX, startY, endX, endY, lenX, lenY, new_zone, frame
     if event == cv.EVENT_LBUTTONDOWN:
         startX, startY = mouseX,mouseY
-    elif event == cv.EVENT_LBUTTONUP:
+        new_zone = True
+    elif event == cv.EVENT_MOUSEMOVE and new_zone:
+        #print(startX, startY, mouseX,mouseY)
+        cv.rectangle(frame, (startX, startY), (mouseX,mouseY),(0,255,0), 2)
+    elif event == cv.EVENT_LBUTTONUP and new_zone:
         endX, endY = mouseX, mouseY
         if True:
             trX1, trY1 , trX2, trY2 = cropping_rect(startX, startY, endY, endY)
@@ -62,7 +67,8 @@ def coords(event,mouseX,mouseY, flags, param):
             lenX, lenY = int(math.fabs(trX1-startX)), int(math.fabs(trY1-startY))
             print("dx dy")
             print(lenX, lenY)
-            tracking(frame, box)
+            tracking(param, box)
+        new_zone = False
     return (startX, startY, endX, endY)
 
 # Функція малювання прямокутника по заданим координатам
@@ -76,9 +82,9 @@ def draw_rectangle():
 
 # Фукнція для роботи асинхронної обробки зображення 
 def callbacking(temp_res):
-    global cut_img, rect, res
+    global cut_img, rect, res, clear_frame
     if rect == True:
-        cut_img = frame[startY+1:endY-1, startX+1:endX-1]
+        cut_img = clear_frame[startY+1:endY-1, startX+1:endX-1]
     pool.apply_async(upscale_nn, args=(cut_img,), callback=callbacking)
     if isinstance(temp_res, np.ndarray):
         res = temp_res
@@ -120,8 +126,9 @@ if __name__=="__main__":
     t.start()
     while True:
         ret, frame = video.read()
+        clear_frame = frame.copy()
         cv.namedWindow('Frame')
-        cv.setMouseCallback('Frame', coords)
+        cv.setMouseCallback('Frame', coords, param=clear_frame)
         if track_flag and not is_border(startX, startY, endY, endY):
             tracker.update(frame)
             pos = tracker.get_position()
@@ -132,7 +139,7 @@ if __name__=="__main__":
             print("TRACK UPDATE")
             #lenX, lenY = cropping_rect(startX, startY, endY, endY)
             # малюємо внутрішній прямокутник
-            cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (0, 255, 0), 2)
+            cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (255, 0), 2)
             dx, dy = (X1-startX)-lenX, (Y1-startY)-lenY
             startX, startY, endX, endY = startX+dx, startY+dy, endX+dx, endY+dy
             #startX, startY, endX, endY = X1-lenX, Y1-lenY, X2+lenX, Y2+lenY
