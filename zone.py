@@ -8,7 +8,7 @@ from detection import detectVehicleCoords
 import dlib
 import math
 
-video = cv.VideoCapture("car.MP4")
+video = cv.VideoCapture("tank.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
 fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
