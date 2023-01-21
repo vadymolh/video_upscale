@@ -1,12 +1,10 @@
 import cv2
 
-# Load the image
-
 
 def detectVehicleCoords(image)->tuple:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image = cv2.GaussianBlur(image, (3, 3), 0)
-    #cv2.imshow("Blured Image", image)
+    
     # Apply the Otsu thresholding to get the optimal threshold value
     threshold, ret = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
@@ -25,7 +23,7 @@ def detectVehicleCoords(image)->tuple:
 
     # Find all contours in the image
     contours, _ = cv2.findContours(opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #cv2.imshow("Opened Image", opened)
+
     # Find the largest contour
     if len(contours) > 0:
         largest_contour = max(contours, key=cv2.contourArea)
@@ -37,6 +35,4 @@ def detectVehicleCoords(image)->tuple:
     else:
         print ("no contours")
         return (0,0,0,0)
-    print(f"Width:{w}  Height: {h}")
-    print (x,y, x+w, y+h)
     return x,y, x+w, y+h
