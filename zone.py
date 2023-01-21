@@ -4,17 +4,24 @@ import numpy as np
 import multiprocessing
 import threading as td
 from upscale import upscale_nn
+from detection import detectVehicleCoords
 import dlib
+import math
 
 video = cv.VideoCapture("vid.mp4")
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
 fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
 fr_height = video.get(cv.CAP_PROP_FRAME_HEIGHT)
+
+if not fps: fps=30
+
+
 seconds = round(frames / fps, 1)
 
 startX, startY = 0, 0
 endX, endY = 0, 0
+lenX, lenY = 0, 0
 rect = False
 cut_img = 0
 res = 0
@@ -22,14 +29,18 @@ old_res = 0
 k = 0
 tracker = dlib.correlation_tracker()
 track_flag = False
+new_zone = False
 
 def cropping_rect(startX, startY, endX, endY, koef=0.25):
     """Функція для зменшення прямокутника, з подальшим передавання координат у трекер"""
-    lenX = endX - startX
-    lenY = endY - startY
-    lenX = lenX * koef
-    lenY = lenY * koef
-    return (int(lenX), int(lenY))
+
+    global frame
+    
+    x1,y1,x2,y2 = detectVehicleCoords(clear_frame[startY:endY, startX:endX+int(endX*koef)])
+   
+    res = ( startX+x1 , startY+y1, startX+x2, startY+y2)
+    return res
+
 def tracking(frame, box):
     global tracker, track_flag
     tracker.start_track(frame, box)
@@ -37,15 +48,22 @@ def tracking(frame, box):
 
 # Функція знаходження координат виділеної зони
 def coords(event,mouseX,mouseY, flags, param):
-    global startX, startY, endX, endY 
+    global startX, startY, endX, endY, lenX, lenY, new_zone, frame
     if event == cv.EVENT_LBUTTONDOWN:
         startX, startY = mouseX,mouseY
-    elif event == cv.EVENT_LBUTTONUP:
+        new_zone = True
+    elif event == cv.EVENT_MOUSEMOVE and new_zone:
+        #print(startX, startY, mouseX,mouseY)
+        cv.rectangle(frame, (startX, startY), (mouseX,mouseY),(0,255,0), 2)
+    elif event == cv.EVENT_LBUTTONUP and new_zone:
         endX, endY = mouseX, mouseY
-        if ret:
-            lenX, lenY = cropping_rect(startX, startY, endY, endY)
-            box = dlib.rectangle(int(startX + lenX), int(startY+lenY), int(endX-lenX), int(endY-lenY))
-            tracking(frame, box)
+        if True:
+            trX1, trY1 , trX2, trY2 = cropping_rect(startX, startY, endY, endY)
+            #box = dlib.rectangle(int(startX + lenX), int(startY+lenY), int(endX-lenX), int(endY-lenY))
+            box = dlib.rectangle(trX1, trY1 , trX2, trY2)
+            lenX, lenY = int(math.fabs(trX1-startX)), int(math.fabs(trY1-startY))
+            tracking(param, box)
+        new_zone = False
     return (startX, startY, endX, endY)
 
 # Функція малювання прямокутника по заданим координатам
@@ -59,9 +77,9 @@ def draw_rectangle():
 
 # Фукнція для роботи асинхронної обробки зображення 
 def callbacking(temp_res):
-    global cut_img, rect, res
+    global cut_img, rect, res, clear_frame
     if rect == True:
-        cut_img = frame[startY+1:endY-1, startX+1:endX-1]
+        cut_img = clear_frame[startY+1:endY-1, startX+1:endX-1]
     pool.apply_async(upscale_nn, args=(cut_img,), callback=callbacking)
     if isinstance(temp_res, np.ndarray):
         res = temp_res
@@ -73,11 +91,7 @@ def show_result():
         if isinstance(res, np.ndarray):
             if not np.array_equal(res, old_res):
                 im = res[:,:,::-1]
-                width = int(im.shape[1]*0.4)
-                height = int(im.shape[0]*0.4)
-                size = (width, height)
-                resized_im = cv.resize(im, size)
-                cv.imshow('Upscaled',resized_im)
+                cv.imshow('Upscaled',im)
                 k = cv.waitKey(1)
                 old_res = res
                 if k == 27:
@@ -103,8 +117,11 @@ if __name__=="__main__":
     t.start()
     while True:
         ret, frame = video.read()
+        clear_frame = frame.copy()
         cv.namedWindow('Frame')
-        cv.setMouseCallback('Frame', coords)
+
+        cv.setMouseCallback('Frame', coords, param=clear_frame)
+
         if track_flag and not is_border(startX, startY, endY, endY):
             tracker.update(frame)
             pos = tracker.get_position()
@@ -112,10 +129,14 @@ if __name__=="__main__":
             Y1 = int(pos.top()) 
             X2 = int(pos.right())
             Y2 = int(pos.bottom())
-            lenX, lenY = cropping_rect(startX, startY, endY, endY)
+
+            #lenX, lenY = cropping_rect(startX, startY, endY, endY)
             # малюємо внутрішній прямокутник
-            cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (0, 255, 0), 2)
-            startX, startY, endX, endY = X1-lenX, Y1-lenY, X2+lenX, Y2+lenY
+            cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (255, 0), 2)
+            dx, dy = (X1-startX)-lenX, (Y1-startY)-lenY
+            startX, startY, endX, endY = startX+dx, startY+dy, endX+dx, endY+dy
+
+
         draw_rectangle()
         cv.imshow('Frame', frame)
         #cv.imshow("Otsu", image_result)
