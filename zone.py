@@ -13,7 +13,10 @@ frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
 fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
 fr_height = video.get(cv.CAP_PROP_FRAME_HEIGHT)
+
 if not fps: fps=30
+
+
 seconds = round(frames / fps, 1)
 
 startX, startY = 0, 0
@@ -30,17 +33,14 @@ new_zone = False
 
 def cropping_rect(startX, startY, endX, endY, koef=0.25):
     """Функція для зменшення прямокутника, з подальшим передавання координат у трекер"""
+
     global frame
-    #cv.imshow("Crop Image", clear_frame[startY:endY, startX:endX+int(endX*koef)])
+    
     x1,y1,x2,y2 = detectVehicleCoords(clear_frame[startY:endY, startX:endX+int(endX*koef)])
-    #lenX = endX - startX
-    #lenY = endY - startY
-    #lenX = math.fabs(endX - startX)
-    #lenY = math.fabs(endY - startY)
-    #lenX = lenX * koef
-    #lenY = lenY * koef
+   
     res = ( startX+x1 , startY+y1, startX+x2, startY+y2)
     return res
+
 def tracking(frame, box):
     global tracker, track_flag
     tracker.start_track(frame, box)
@@ -119,7 +119,9 @@ if __name__=="__main__":
         ret, frame = video.read()
         clear_frame = frame.copy()
         cv.namedWindow('Frame')
+
         cv.setMouseCallback('Frame', coords, param=clear_frame)
+
         if track_flag and not is_border(startX, startY, endY, endY):
             tracker.update(frame)
             pos = tracker.get_position()
@@ -127,12 +129,14 @@ if __name__=="__main__":
             Y1 = int(pos.top()) 
             X2 = int(pos.right())
             Y2 = int(pos.bottom())
+
             #lenX, lenY = cropping_rect(startX, startY, endY, endY)
             # малюємо внутрішній прямокутник
             cv.rectangle(frame, (int(X1), int(Y1)), (int(X2), int(Y2)), (255, 0), 2)
             dx, dy = (X1-startX)-lenX, (Y1-startY)-lenY
             startX, startY, endX, endY = startX+dx, startY+dy, endX+dx, endY+dy
-            #startX, startY, endX, endY = X1-lenX, Y1-lenY, X2+lenX, Y2+lenY
+
+
         draw_rectangle()
         cv.imshow('Frame', frame)
         #cv.imshow("Otsu", image_result)
