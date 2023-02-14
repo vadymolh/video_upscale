@@ -3,12 +3,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import multiprocessing
 import threading as td
+from open_file import FilePathWindow
 from upscale import upscale_nn
 from detection import detectVehicleCoords
+import tkinter.filedialog
 import dlib
 import math
 
-video = cv.VideoCapture("vid.mp4")
+filepath_window = FilePathWindow()
+filepath_window.mainloop()
+while True:
+    if filepath_window.filename != None:
+        video = cv.VideoCapture(filepath_window.filename)
+        filepath_window.destroy()
+        break
+
 frames = video.get(cv.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv.CAP_PROP_FPS)
 fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
