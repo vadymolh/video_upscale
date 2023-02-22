@@ -3,30 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import multiprocessing
 import threading as td
-from open_file import FilePathWindow
+import open_file
 from upscale import upscale_nn
 from detection import detectVehicleCoords
 import tkinter.filedialog
 import dlib
 import math
-
-filepath_window = FilePathWindow()
-filepath_window.mainloop()
-while True:
-    if filepath_window.filename != None:
-        video = cv.VideoCapture(filepath_window.filename)
-        filepath_window.destroy()
-        break
-
-frames = video.get(cv.CAP_PROP_FRAME_COUNT)
-fps = video.get(cv.CAP_PROP_FPS)
-fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
-fr_height = video.get(cv.CAP_PROP_FRAME_HEIGHT)
-
-if not fps: fps=30
-
-
-seconds = round(frames / fps, 1)
 
 startX, startY = 0, 0
 endX, endY = 0, 0
@@ -113,6 +95,22 @@ def is_border(startX, startY, endX, endY):
     return False
 
 if __name__=="__main__":
+    filepath_window = open_file.FilePathWindow()
+    if open_file.filename != None:
+        filepath_window.destroy()
+    filepath_window.mainloop()
+
+    video = cv.VideoCapture(open_file.filename)
+    
+    frames = video.get(cv.CAP_PROP_FRAME_COUNT)
+    fps = video.get(cv.CAP_PROP_FPS)
+    fr_width = video.get(cv.CAP_PROP_FRAME_WIDTH)
+    fr_height = video.get(cv.CAP_PROP_FRAME_HEIGHT)
+
+    if not fps: fps=30
+    seconds = round(frames / fps, 1)
+
+
     ret, first_frame = video.read()
     cut_img = first_frame[0:40, 0:40]
 
