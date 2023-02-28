@@ -6,7 +6,6 @@ import threading as td
 import open_file
 from upscale import upscale_nn
 from detection import detectVehicleCoords
-import tkinter.filedialog
 import dlib
 import math
 
@@ -39,10 +38,11 @@ def tracking(frame, box):
 
 # Функція знаходження координат виділеної зони
 def coords(event,mouseX,mouseY, flags, param):
-    global startX, startY, endX, endY, lenX, lenY, new_zone, frame
+    global startX, startY, endX, endY, lenX, lenY, new_zone, frame, track_flag
     if event == cv.EVENT_LBUTTONDOWN:
         startX, startY = mouseX,mouseY
         new_zone = True
+        track_flag = False
     elif event == cv.EVENT_MOUSEMOVE and new_zone:
         #print(startX, startY, mouseX,mouseY)
         cv.rectangle(frame, (startX, startY), (mouseX,mouseY),(0,255,0), 2)
