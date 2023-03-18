@@ -18,11 +18,11 @@ class VideoPlayerApp(App):
         # create buttons to play, pause, and stop the video
         upscale_button = Button(text='Upscale',
                              size_hint = (.10, .10),
-                             pos_hint = {'x': 0.15, 'y': 0.005},)
+                             pos_hint = {'x': 0.15, 'y': 0.01},)
         
         tracking_button = Button(text='Tracking', 
                               size_hint = (.10, .10),
-                              pos_hint = {'x': 0.75, 'y': 0.005},)
+                              pos_hint = {'x': 0.75, 'y': 0.01},)
         
         play_button = Button(text='Play', 
                               size_hint = (.10, .10),

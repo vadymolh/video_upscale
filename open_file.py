@@ -8,9 +8,9 @@ class FilePathWindow(Tk):
         self.geometry("300x300")
         self.label = Label(text="Шлях до файлу:")
         self.label.pack()
-        self.button1 = Button(text = "Вибрати файл", command=self.ask_open)
-        self.button1.pack()
-        self.button2 = Button(text = "Почати", command=self.start)
+        self.button1 = Button(text = "Вибрати файл", command=self.ask_open, font=("Arial", 18))
+        self.button1.pack(pady=30)
+        self.button2 = Button(text = "Почати", command=self.start, width=12, font=("Arial", 18))
         self.button2.pack()
     
     def ask_open(self):

@@ -10,7 +10,7 @@ import dlib
 import math
 
 startX, startY = 0, 0
-endX, endY = 0, 0
+endX, endY = 1, 1
 lenX, lenY = 0, 0
 rect = False
 cut_img = 0
@@ -26,7 +26,7 @@ def cropping_rect(startX, startY, endX, endY, koef=0.25):
 
     global frame
     
-    x1,y1,x2,y2 = detectVehicleCoords(clear_frame[startY:endY, startX:endX+int(endX*koef)])
+    x1,y1,x2,y2 = detectVehicleCoords(clear_frame[startY:endY, startX:endX])
    
     res = ( startX+x1 , startY+y1, startX+x2, startY+y2)
     return res
@@ -41,15 +41,24 @@ def coords(event,mouseX,mouseY, flags, param):
     global startX, startY, endX, endY, lenX, lenY, new_zone, frame, track_flag
 
     if event == cv.EVENT_LBUTTONDOWN:
+        endX, endY = mouseX,mouseY
         startX, startY = mouseX,mouseY
         new_zone = True
         track_flag = False
 
     elif event == cv.EVENT_LBUTTONUP and new_zone:
-        endX, endY = mouseX, mouseY
-        trX1, trY1 , trX2, trY2 = cropping_rect(startX, startY, endY, endY)
+        if mouseX<endX or mouseY<endY:
+            startX, startY = mouseX, mouseY
+        else:
+            endX, endY = mouseX, mouseY
+        trX1, trY1 , trX2, trY2 = (0, 0, 0, 0)
+        if (startX, startY) != (endX, endY):
+            trX1, trY1 , trX2, trY2 = cropping_rect(startX, startY, endX, endY)
         box = dlib.rectangle(trX1, trY1 , trX2, trY2)
         lenX, lenY = int(math.fabs(trX1-startX)), int(math.fabs(trY1-startY))
+        if (trX1, trY1 , trX2, trY2) == (0, 0, 0, 0):
+            track_flag = False
+            return
         tracking(param, box)
         new_zone = False
 
@@ -66,9 +75,14 @@ def draw_rectangle():
 
 # Фукнція для роботи асинхронної обробки зображення 
 def callbacking(temp_res):
-    global cut_img, rect, res, clear_frame
+    global cut_img, rect, res, clear_frame, startX, startY, endX, endY
     if rect == True:
-        cut_img = clear_frame[startY+1:endY-1, startX+1:endX-1]
+        if ((startX, startY) == (endX, endY)) or \
+           (math.fabs(startX-endX)<40 or \
+            math.fabs(startY-endY)<40):
+            cut_img = first_frame[0:40, 0:40]
+        else:
+            cut_img = clear_frame[startY+1:endY-1, startX+1:endX-1]
     pool.apply_async(upscale_nn, args=(cut_img,), callback=callbacking)
     if isinstance(temp_res, np.ndarray):
         res = temp_res
@@ -123,7 +137,7 @@ if __name__=="__main__":
 
         cv.setMouseCallback('Frame', coords, param=clear_frame)
 
-        if track_flag and not is_border(startX, startY, endY, endY):
+        if track_flag and not is_border(startX, startY, endX, endY):
             tracker.update(frame)
             pos = tracker.get_position()
             X1 = int(pos.left()) 
