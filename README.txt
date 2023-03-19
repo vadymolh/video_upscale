@@ -17,6 +17,11 @@
     - Python 3.9 https://github.com/datamagic2020/Install-dlib/blob/main/dlib-19.22.99-cp39-cp39-win_amd64.whl 
     - Python 3.10 https://github.com/datamagic2020/Install-dlib/blob/main/dlib-19.22.99-cp310-cp310-win_amd64.whl 
 
+Програма точно працює при такій комбінації версій бібліотек із Python 3.10.6 :
+    - OpenCV 4.5.4.58
+    - NumPy 1.23.2
+    - Matplotlib 3.6.2
+
 Тепер необхідно в командній строці ввести pip install "шлях до встановленого файлу з розширенням .whl"
 
 
