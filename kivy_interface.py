@@ -1,14 +1,52 @@
 from kivy.app import App
 from kivy.uix.video import Video
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.button import Button
+from kivy.uix.button import Button, Label
+from plyer import filechooser
 import cv2
-video = None
+video_source = None
+class FileChooserApp(App):
+    def build(self):
+        layout = FloatLayout()
+
+        # create button to open file chooser dialog
+        button = Button(text='Обрати файл',
+                        size_hint=(0.3, 0.1),
+                        pos_hint={'x': 0.35, 'y': 0.1})
+        button.bind(on_press= lambda x: self.show_file_chooser())
+        #button_esc = Button(text='Запустити відео',
+                        #size_hint=(0.3, 0.1),
+                        #pos_hint={'x': 0.35, 'y': 0.2})
+        #button.bind(on_press = lambda x:self.stop_app())
+        self.label = Label(text = "Оберіть файл",
+                      size_hint = (0.3, 0.1),
+                      pos_hint = {'x': 0.35, 'y': 0.5})
+        # add button to layout
+        layout.add_widget(button)
+        #layout.add_widget(button_esc)
+        layout.add_widget(self.label)
+        return layout
+
+    def show_file_chooser(self):
+        # open file chooser dialog and get selected file
+        filechooser.open_file(on_selection = self.selected)
+    
+    def selected(self, selection):
+        global video_source
+        video_source = selection[0]
+        self.label.text = f"Ваш файл: {video_source}"
+        return video_source
+
+        
+if __name__ == '__main__':
+    FileChooserApp().run()
+    print(video_source)
+
 class VideoPlayerApp(App):
     def build(self):
         global video
         # create a Video widget to display the video
-        video = Video(source='vid.mp4', state='stop', size_hint = (0.8, 1), pos_hint = {'x': 0, 'y': 0.12})
+        video = Video(source=video_source, state='stop', size_hint = (0.8, 1), pos_hint = {'x': 0, 'y': 0.12})
         # create a box layout to hold the video and control buttons
         layout = FloatLayout(height = 1080, width = 1920)
         
