@@ -33,10 +33,11 @@ if __name__=="__main__":
         def redraw(self, *args):
             self.canvas.remove_group('rect')
             print("REDRAWING RECT")
+            print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
+            print(f"WIDGET position: {self.pos}")
             with self.canvas:
                 self.rect = Line(rectangle=(0+self.pos[0],0+self.pos[1], 50,50),width=2, group='rect')
         def _on_video_frame(self, *largs):
-            #print("FRAME RUNNING/////////////////////////////////////////////")
             super()._on_video_frame(*largs)
             print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
             print(f"WIDGET position: {self.pos}")
@@ -66,7 +67,11 @@ if __name__=="__main__":
     class VideoApp(App):
         def build(self):
             # create a Video widget to display the video filechooser.video_source
-            self.video = VideoExt(source="video for test/vid.mp4", state='stop', size_hint = (0.8, 1), pos_hint = {'x': 0, 'y': 0.12})
+            self.video = VideoExt(source="video for test/vid.mp4", 
+                                  state='stop', 
+                                  size_hint = (0.8, 1), 
+                                  pos_hint = {'x': 0, 'y': 0.12},
+                                  keep_ratio= True)
             print(self.video.source)
             # create a box layout to hold the video and control buttons
             layout = FloatLayout(height = 1080, width = 1920)
