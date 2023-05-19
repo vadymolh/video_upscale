@@ -6,6 +6,8 @@ if __name__=="__main__":
     import sys
     from kivy.uix.video import Video
     from kivy.uix.floatlayout import FloatLayout
+    from kivy.uix.boxlayout import BoxLayout
+    from kivy.uix.gridlayout import GridLayout
     from kivy.uix.button import Button, Label
     from kivy.graphics import Rectangle, Color, Rectangle, Line
     from kivy.properties import ReferenceListProperty
@@ -23,6 +25,10 @@ if __name__=="__main__":
             self.pool = None
             self.res  = None
             self.cut_img = None
+            #tuple to store coordinates of rectangle on Video Widget 
+            self.start_pos, self.end_pos = None, None
+            #tuple to store coordinates of rectangle in cv2 Coordinates format
+            self.cv_start_pos, self.cv_end_pos = None, None
             self.upscaleInstance = UpscaleNN(frame=self.frame)
             print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
             with self.canvas:
@@ -49,7 +55,30 @@ if __name__=="__main__":
             texture_coords = texture.uvpos[:]
             # Print or use the texture_coords as needed
             print("Texture Coords:", texture_coords)
+
+        def get_visible_image_touch_coords(self, touch):
+            if not self.collide_point(*touch.pos):
+                return False
+            lr_space = (self.width - self.norm_image_size[0]) / 2  # empty space in Image widget left and right of actual image
+            tb_space = (self.height - self.norm_image_size[1]) / 2
+            pixel_x = touch.x - lr_space - self.x  # x coordinate of touch measured from lower left of actual image
+            pixel_y = touch.y - tb_space - self.y  # y coordinate of touch measured from lower left of actual image
+            return pixel_x, pixel_y
+        
+        def get_true_image_pixel_coords(self, visible_coords):
+            if not visible_coords:
+                return False
+            pixel_x, pixel_y = visible_coords
+            true_x = pixel_x * self.texture_size[0] / self.norm_image_size[0]
+            true_y = pixel_y * self.texture_size[1] / self.norm_image_size[1]
+            #revert Y Axis for cv2 usage
+            true_y = self.texture_size[1] - true_y
+            return int(true_x), int(true_y)
+
+
             
+
+
         def set_upscale_frame(self, *args):
             height, width = self.texture.height, self.texture.width
             start_flag = False
@@ -63,7 +92,22 @@ if __name__=="__main__":
             if start_flag:
                 t = td.Thread(target=self.upscaleInstance.run_upscale) 
                 t.start()
-           
+        def on_touch_down(self, touch):
+            with self.canvas:  
+                self.start_pos = self.get_visible_image_touch_coords(touch)
+                self.cv_start_pos = self.get_true_image_pixel_coords( self.start_pos)
+        def on_touch_up(self, touch):
+            with self.canvas:  
+                lr_space = (self.width - self.norm_image_size[0]) / 2  # empty space in Image widget left and right of actual image
+                tb_space = (self.height - self.norm_image_size[1]) / 2
+                self.end_pos = self.get_visible_image_touch_coords(touch)
+                self.cv_end_pos = self.get_true_image_pixel_coords(self.end_pos)
+                if not self.end_pos or not self.start_pos:
+                    return
+                x1,y1 = self.start_pos[0] + lr_space + self.x, self.start_pos[1] + tb_space + self.y
+                x2,y2 = self.end_pos[0] + lr_space + self.x, self.end_pos[1] + tb_space + self.y
+                Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
+    
     class VideoApp(App):
         def build(self):
             # create a Video widget to display the video filechooser.video_source
@@ -75,9 +119,10 @@ if __name__=="__main__":
             print(self.video.source)
             # create a box layout to hold the video and control buttons
             layout = FloatLayout(height = 1080, width = 1920)
-            
+            #video_box = GridLayout(rows=1, cols=1)
             # add the Video widget to the layout
             layout.add_widget(self.video)
+            #video_box.add_widget(self.video)
             
             # create buttons to play, pause, and stop the video
             upscale_button = Button(text='Upscale',
