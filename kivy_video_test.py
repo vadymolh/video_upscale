@@ -7,6 +7,8 @@ if __name__=="__main__":
     from kivy.uix.video import Video
     from kivy.uix.floatlayout import FloatLayout
     from kivy.uix.button import Button, Label
+    from kivy.graphics import Rectangle, Color, Rectangle, Line
+    from kivy.properties import ReferenceListProperty
     import numpy as np
     import cv2
     #import multiprocessing
@@ -22,13 +24,30 @@ if __name__=="__main__":
             self.res  = None
             self.cut_img = None
             self.upscaleInstance = UpscaleNN(frame=self.frame)
+            print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
+            with self.canvas:
+                Color(0,1,0,0.3, mode="rgba")
+                self.rect = Line(rectangle=(0+self.pos[0], 0+self.pos[1], 50,50),width=2, group='rect')
+            self.bind(pos=self.redraw, size=self.redraw)
+            self.bind(texture=self.on_texture)
+        def redraw(self, *args):
+            self.canvas.remove_group('rect')
+            print("REDRAWING RECT")
+            with self.canvas:
+                self.rect = Line(rectangle=(0+self.pos[0],0+self.pos[1], 50,50),width=2, group='rect')
         def _on_video_frame(self, *largs):
             #print("FRAME RUNNING/////////////////////////////////////////////")
             super()._on_video_frame(*largs)
+            print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
+            print(f"WIDGET position: {self.pos}")
+            self.redraw()
             self.set_upscale_frame(self)
 
-        def on_texture(self, *args):
-            print("TEXTURE LOADED")
+        def on_texture(self, instance, texture, *args):
+            super(VideoExt, self).on_texture(instance, texture)
+            texture_coords = texture.uvpos[:]
+            # Print or use the texture_coords as needed
+            print("Texture Coords:", texture_coords)
             
         def set_upscale_frame(self, *args):
             height, width = self.texture.height, self.texture.width
