@@ -17,36 +17,62 @@ if __name__=="__main__":
     import threading as td
     import filechooser
     from upscale import UpscaleNN
+    from detection import detectVehicleCoords
+    import dlib
+    import math
 
     class VideoExt(Video):
+        #absolute coordinates of rectangle on Video
+        x1, y1, x2, y2 = None, None, None, None
+        tracker_flag = False
+        tracker = dlib.correlation_tracker()
+        # reference distance from zone corner to object corner
+        ref_x, ref_y = 0, 0 
+
         def __init__(self, **kwargs):
             super().__init__(**kwargs)        
             self.frame = None
             self.pool = None
             self.res  = None
             self.cut_img = None
-            #tuple to store coordinates of rectangle on Video Widget 
+            #tuple to store relative coordinates of rectangle on Video Widget 
             self.start_pos, self.end_pos = None, None
+
             #tuple to store coordinates of rectangle in cv2 Coordinates format
             self.cv_start_pos, self.cv_end_pos = None, None
             self.upscaleInstance = UpscaleNN(frame=self.frame)
-            print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
             with self.canvas:
                 Color(0,1,0,0.3, mode="rgba")
-                self.rect = Line(rectangle=(0+self.pos[0], 0+self.pos[1], 50,50),width=2, group='rect')
             self.bind(pos=self.redraw, size=self.redraw)
             self.bind(texture=self.on_texture)
         def redraw(self, *args):
             self.canvas.remove_group('rect')
-            print("REDRAWING RECT")
-            print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
-            print(f"WIDGET position: {self.pos}")
+            #print("REDRAWING RECT")
+            #print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
+            #print(f"WIDGET position: {self.pos}")
             with self.canvas:
-                self.rect = Line(rectangle=(0+self.pos[0],0+self.pos[1], 50,50),width=2, group='rect')
+                x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
+                if x1 and y1 and x2 and y2:
+                    Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
         def _on_video_frame(self, *largs):
             super()._on_video_frame(*largs)
-            print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
-            print(f"WIDGET position: {self.pos}")
+            #print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
+            #print(f"WIDGET position: {self.pos}")
+            if self.tracker_flag:
+                self.tracker.update(self.frame)
+                pos = self.tracker.get_position()
+                obj_x1, obj_y1, obj_x2, obj_y2  = int(pos.left()), \
+                                                  int(pos.top()),  \
+                                                  int(pos.right()),\
+                                                  int(pos.bottom())
+                obj_x1, obj_y1, obj_x2, obj_y2 = self.transform_coords(obj_x1, 
+                                                                       obj_y1, 
+                                                                       obj_x2, 
+                                                                       obj_y2, 
+                                                                       to_kivy=True)
+                dx, dy = (obj_x1-self.x1)-self.ref_x, (obj_y1-self.y1)-self.ref_y
+                self.x1, self.y1, self.x2, self.y2 = self.x1+dx, self.y1+dy, self.x2+dx, self.y2+dy
+            print((self.x1, self.y1, self.x2, self.y2))
             self.redraw()
             self.set_upscale_frame(self)
 
@@ -54,7 +80,7 @@ if __name__=="__main__":
             super(VideoExt, self).on_texture(instance, texture)
             texture_coords = texture.uvpos[:]
             # Print or use the texture_coords as needed
-            print("Texture Coords:", texture_coords)
+            #print("Texture Coords:", texture_coords)
 
         def get_visible_image_touch_coords(self, touch):
             if not self.collide_point(*touch.pos):
@@ -74,11 +100,17 @@ if __name__=="__main__":
             #revert Y Axis for cv2 usage
             true_y = self.texture_size[1] - true_y
             return int(true_x), int(true_y)
-
-
-            
-
-
+        
+        def get_texture_coords(self, cv_coords):
+            """Transform x, y from cv2 pixel image coord to texture coords"""
+            if not cv_coords:
+                return False
+            pixel_x, pixel_y = cv_coords
+            x = pixel_x * self.norm_image_size[0] / self.texture_size[0]
+            y = pixel_y * self.norm_image_size[1] / self.texture_size[1] 
+            y = self.norm_image_size[1] - y
+            return int(x), int(y)
+        
         def set_upscale_frame(self, *args):
             height, width = self.texture.height, self.texture.width
             start_flag = False
@@ -104,19 +136,39 @@ if __name__=="__main__":
                 self.cv_end_pos = self.get_true_image_pixel_coords(self.end_pos)
                 if not self.end_pos or not self.start_pos:
                     return
-                x1,y1 = self.start_pos[0] + lr_space + self.x, self.start_pos[1] + tb_space + self.y
-                x2,y2 = self.end_pos[0] + lr_space + self.x, self.end_pos[1] + tb_space + self.y
+                self.x1, self.y1 = self.start_pos[0] + lr_space + self.x, self.start_pos[1] + tb_space + self.y
+                self.x2, self.y2 = self.end_pos[0] + lr_space + self.x, self.end_pos[1] + tb_space + self.y
+                x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
                 Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
-    
+            if not self.tracker_flag and None not in (x1, y1, x2, y2):
+                x1, y1, x2, y2 = self.transform_coords(x1, y1, x2, y2, to_cv=True)                
+                obj_x1, obj_y1, obj_x2, obj_y2 =detectVehicleCoords(self.frame[y1:y2, x1:x2])
+                obj_x1, obj_y1, obj_x2, obj_y2 = self.cv_start_pos[0] + obj_x1, self.cv_start_pos[1] + obj_y1, self.cv_start_pos[0] + obj_x2, self.cv_start_pos[1] + obj_y2
+                box = dlib.rectangle(obj_x1, obj_y1, obj_x2, obj_y2)
+                self.tracker.start_track(self.frame, box)
+                self.tracker_flag = True
+                self.ref_x, self.ref_y = int(math.fabs(obj_x1-x1)), int(math.fabs(obj_y2-y2))
+
+        def transform_coords(self, x1, y1, x2, y2, to_cv=False, to_kivy=False):
+            if to_cv:
+                x1, y1 = self.get_true_image_pixel_coords((x1, y1))
+                x2, y2 = self.get_true_image_pixel_coords((x2, y2))
+                return x1, y2, x2, y1
+            elif to_kivy:
+                x1, y1 =  self.get_texture_coords((x1, y1))
+                x2, y2 =  self.get_texture_coords((x2, y2))
+                return x1, y2, x2, y1
+            return x1, y1, x2, y2
+               
     class VideoApp(App):
         def build(self):
             # create a Video widget to display the video filechooser.video_source
-            self.video = VideoExt(source="video for test/vid.mp4", 
+            self.video = VideoExt(source="video for test/car.mp4", 
                                   state='stop', 
                                   size_hint = (0.8, 1), 
                                   pos_hint = {'x': 0, 'y': 0.12},
                                   keep_ratio= True)
-            print(self.video.source)
+            #print(self.video.source)
             # create a box layout to hold the video and control buttons
             layout = FloatLayout(height = 1080, width = 1920)
             #video_box = GridLayout(rows=1, cols=1)
