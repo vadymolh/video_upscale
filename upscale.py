@@ -20,7 +20,7 @@ def upscale_nn( im, path = "models/LapSRN_x4.pb"):
 
 class UpscaleNN():
     pool = MyPool(4)
-    def __init__(self, frame, x1=100, y1=100, x2=240, y2=240, path="models/LapSRN_x4.pb"):
+    def __init__(self, frame, path="models/LapSRN_x4.pb", x1=100, y1=100, x2=240, y2=240,):
         self.x1, self.y1, self.x2, self.y2 =  x1, y1, x2, y2
         self.frame = frame
         self.cut_img = None
