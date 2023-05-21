@@ -61,19 +61,25 @@ if __name__=="__main__":
             super()._on_video_frame(*largs)
             #print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
             #print(f"WIDGET position: {self.pos}")
-            if 0:#self.tracker_flag:
+            if self.tracker_flag:
                 self.tracker.update(self.frame)
                 pos = self.tracker.get_position()
                 obj_x1, obj_y1, obj_x2, obj_y2  = int(pos.left()), \
                                                   int(pos.top()),  \
                                                   int(pos.right()),\
                                                   int(pos.bottom())
+                print("tracker ", obj_x1, obj_y1, obj_x2, obj_y2)
                 obj_x1, obj_y1, obj_x2, obj_y2 = self.transform_coords(obj_x1, 
                                                                        obj_y1, 
                                                                        obj_x2, 
                                                                        obj_y2, 
                                                                        to_kivy=True)
-                dx, dy = (obj_x1-self.x1)-self.ref_x, (obj_y1-self.y1)-self.ref_y
+                print("Transform tracker ", obj_x1, obj_y1, obj_x2, obj_y2)
+                lr_space = (self.width - self.norm_image_size[0]) / 2  # empty space in Image widget left and right of actual image
+                tb_space = (self.height - self.norm_image_size[1]) / 2  
+                with self.canvas:
+                    Line(rectangle=(obj_x1, obj_y1, obj_x2-obj_x1, obj_y2-obj_y1),width=2, group='rect')
+                dx, dy = (obj_x1-self.x1)-self.ref_x, (obj_y1-self.y1)-self.ref_y + 2*tb_space
                 self.x1, self.y1, self.x2, self.y2 = self.x1+dx, self.y1+dy, self.x2+dx, self.y2+dy
             #print((self.x1, self.y1, self.x2, self.y2))
             self.redraw()
@@ -137,6 +143,7 @@ if __name__=="__main__":
             with self.canvas:  
                 self.start_pos = self.get_visible_image_touch_coords(touch)
                 self.cv_start_pos = self.get_true_image_pixel_coords( self.start_pos)
+                self.tracker_flag = False
         def on_touch_up(self, touch):
             with self.canvas:  
                 lr_space = (self.width - self.norm_image_size[0]) / 2  # empty space in Image widget left and right of actual image
@@ -151,8 +158,10 @@ if __name__=="__main__":
                 Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
             if not self.tracker_flag and None not in (x1, y1, x2, y2):
                 x1, y1, x2, y2 = self.transform_coords(*self.start_pos, *self.end_pos, to_cv=True) 
+                print("ZONE: ", x1, y1, x2, y2)
                 obj_x1, obj_y1, obj_x2, obj_y2 =detectVehicleCoords(self.frame[y1:y2, x1:x2])
-                obj_x1, obj_y1, obj_x2, obj_y2 = self.cv_start_pos[0] + obj_x1, self.cv_start_pos[1] + obj_y1, self.cv_start_pos[0] + obj_x2, self.cv_start_pos[1] + obj_y2
+                print("Vehicle",obj_x1, obj_y1, obj_x2, obj_y2)
+                obj_x1, obj_y1, obj_x2, obj_y2 = x1 + obj_x1, y1 + obj_y1, x1 + obj_x2, y1 + obj_y2
                 box = dlib.rectangle(obj_x1, obj_y1, obj_x2, obj_y2)
                 self.tracker.start_track(self.frame, box)
                 self.tracker_flag = True
@@ -172,7 +181,7 @@ if __name__=="__main__":
     class VideoApp(App):
         def build(self):
             # create a Video widget to display the video filechooser.video_source
-            self.video = VideoExt(source="video for test/vid.mp4", 
+            self.video = VideoExt(source="video for test/car.mp4", 
                                   state='stop', 
                                   size_hint = (0.8, 1), 
                                   pos_hint = {'x': 0, 'y': 0.12},
