@@ -15,7 +15,7 @@ if __name__=="__main__":
     import cv2
     #import multiprocessing
     import threading as td
-    import filechooser
+    from plyer import filechooser
     from upscale import UpscaleNN
     from detection import detectVehicleCoords
     import dlib
@@ -172,7 +172,8 @@ if __name__=="__main__":
     class VideoApp(App):
         def build(self):
             # create a Video widget to display the video filechooser.video_source
-            self.video = VideoExt(source="video for test/vid.mp4", 
+
+            self.video = VideoExt(source=None, 
                                   state='stop', 
                                   size_hint = (0.8, 1), 
                                   pos_hint = {'x': 0, 'y': 0.12},
@@ -207,10 +208,12 @@ if __name__=="__main__":
             nn_button = Button(text='Choose NN', 
                                 size_hint = (.10, .10),
                                 pos_hint = {'x': 0.85, 'y': 0.55},)
+                                #on_press = self.choose_nn)
 
-            clean_button = Button(text='Clean frame', 
+            clean_button = Button(text='Choose video', 
                                 size_hint = (.10, .10),
-                                pos_hint = {'x': 0.85, 'y': 0.4},)
+                                pos_hint = {'x': 0.85, 'y': 0.4},
+                                on_press = self.choose_video)
 
 
             # add the buttons to the layout
@@ -223,9 +226,15 @@ if __name__=="__main__":
             
             # bind the state of the Video widget to update the play/pause button
             self.video.bind(state=self.update_play_pause_button)
-            
             return layout
-            
+        
+        def choose_video(self, instance):
+            self.video_source = filechooser.open_file()
+            self.video.source = self.video_source[0]
+
+        #def choose_nn(self, instance, VideoExt):
+            #self.nn = filechooser.open_file()
+            #self.upscaleInstance.path = self.nn[0]
         def play_video(self, instance):
             # play the video
             self.video.state = 'play'
