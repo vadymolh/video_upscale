@@ -25,6 +25,7 @@ if __name__=="__main__":
         #absolute coordinates of rectangle on Video
         x1, y1, x2, y2 = None, None, None, None
         tracker_flag = False
+        NN_FLAG = False
         tracker = dlib.correlation_tracker()
         # reference distance from zone corner to object corner
         ref_x, ref_y = 0, 0 
@@ -35,9 +36,9 @@ if __name__=="__main__":
             self.pool = None
             self.res  = None
             self.cut_img = None
+            print("Widget POS: " , self.x,self.y)
             #tuple to store relative coordinates of rectangle on Video Widget 
             self.start_pos, self.end_pos = None, None
-
             #tuple to store coordinates of rectangle in cv2 Coordinates format
             self.cv_start_pos, self.cv_end_pos = None, None
             self.upscaleInstance = UpscaleNN(frame=self.frame)
@@ -54,11 +55,13 @@ if __name__=="__main__":
                 x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
                 if x1 and y1 and x2 and y2:
                     Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
+                
+
         def _on_video_frame(self, *largs):
             super()._on_video_frame(*largs)
             #print(f"WIDGET SIZE: {self.size[0]}, {self.size[1]}")
             #print(f"WIDGET position: {self.pos}")
-            if self.tracker_flag:
+            if 0:#self.tracker_flag:
                 self.tracker.update(self.frame)
                 pos = self.tracker.get_position()
                 obj_x1, obj_y1, obj_x2, obj_y2  = int(pos.left()), \
@@ -72,7 +75,7 @@ if __name__=="__main__":
                                                                        to_kivy=True)
                 dx, dy = (obj_x1-self.x1)-self.ref_x, (obj_y1-self.y1)-self.ref_y
                 self.x1, self.y1, self.x2, self.y2 = self.x1+dx, self.y1+dy, self.x2+dx, self.y2+dy
-            print((self.x1, self.y1, self.x2, self.y2))
+            #print((self.x1, self.y1, self.x2, self.y2))
             self.redraw()
             self.set_upscale_frame(self)
 
@@ -113,17 +116,23 @@ if __name__=="__main__":
         
         def set_upscale_frame(self, *args):
             height, width = self.texture.height, self.texture.width
-            start_flag = False
+            start_flag = True
             if not isinstance(self.frame, np.ndarray):
                 if self.frame == None: 
-                    start_flag=True
+                    start_flag=False
+                    self.NN_FLAG=False
             self.frame = np.frombuffer(self.texture.pixels, np.uint8)
             self.frame = self.frame.reshape(height, width, 4)
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_RGBA2BGR)
             self.upscaleInstance.frame = self.frame
-            if start_flag:
+            if type(self.start_pos)==tuple and type(self.end_pos)==tuple:
+                ups = self.upscaleInstance
+                x1, y1, x2, y2 = self.transform_coords(*self.start_pos, *self.end_pos, to_cv=True)
+                ups.x1, ups.y1, ups.x2, ups.y2  = (int(x1), int(y1), int(x2), int(y2))
+            if start_flag and not self.NN_FLAG:
                 t = td.Thread(target=self.upscaleInstance.run_upscale) 
                 t.start()
+                self.NN_FLAG=True
         def on_touch_down(self, touch):
             with self.canvas:  
                 self.start_pos = self.get_visible_image_touch_coords(touch)
@@ -141,7 +150,7 @@ if __name__=="__main__":
                 x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
                 Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
             if not self.tracker_flag and None not in (x1, y1, x2, y2):
-                x1, y1, x2, y2 = self.transform_coords(x1, y1, x2, y2, to_cv=True)                
+                x1, y1, x2, y2 = self.transform_coords(*self.start_pos, *self.end_pos, to_cv=True) 
                 obj_x1, obj_y1, obj_x2, obj_y2 =detectVehicleCoords(self.frame[y1:y2, x1:x2])
                 obj_x1, obj_y1, obj_x2, obj_y2 = self.cv_start_pos[0] + obj_x1, self.cv_start_pos[1] + obj_y1, self.cv_start_pos[0] + obj_x2, self.cv_start_pos[1] + obj_y2
                 box = dlib.rectangle(obj_x1, obj_y1, obj_x2, obj_y2)
@@ -163,7 +172,7 @@ if __name__=="__main__":
     class VideoApp(App):
         def build(self):
             # create a Video widget to display the video filechooser.video_source
-            self.video = VideoExt(source="video for test/car.mp4", 
+            self.video = VideoExt(source="video for test/vid.mp4", 
                                   state='stop', 
                                   size_hint = (0.8, 1), 
                                   pos_hint = {'x': 0, 'y': 0.12},
