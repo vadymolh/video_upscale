@@ -37,7 +37,7 @@ if __name__=="__main__":
             self.pool = None
             self.res  = None
             self.cut_img = None
-            print("Widget POS: " , self.x,self.y)
+            print("Widget POS: " , self.pos, self.size)
             #tuple to store relative coordinates of rectangle on Video Widget 
             self.start_pos, self.end_pos = None, None
             #tuple to store coordinates of rectangle in cv2 Coordinates format
@@ -55,6 +55,7 @@ if __name__=="__main__":
             with self.canvas:
                 x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
                 if x1 and y1 and x2 and y2:
+                    Color(0,1,0,0.3, mode="rgba")
                     Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
                 
 
@@ -69,18 +70,20 @@ if __name__=="__main__":
                                                   int(pos.top()),  \
                                                   int(pos.right()),\
                                                   int(pos.bottom())
-                print("tracker ", obj_x1, obj_y1, obj_x2, obj_y2)
+                #print("tracker ", obj_x1, obj_y1, obj_x2, obj_y2)
                 obj_x1, obj_y1, obj_x2, obj_y2 = self.transform_coords(obj_x1, 
                                                                        obj_y1, 
                                                                        obj_x2, 
                                                                        obj_y2, 
                                                                        to_kivy=True)
-                print("Transform tracker ", obj_x1, obj_y1, obj_x2, obj_y2)
+                #print("Transform tracker ", obj_x1, obj_y1, obj_x2, obj_y2)
                 lr_space = (self.width - self.norm_image_size[0]) / 2  # empty space in Image widget left and right of actual image
                 tb_space = (self.height - self.norm_image_size[1]) / 2  
                 with self.canvas:
-                    Line(rectangle=(obj_x1, obj_y1, obj_x2-obj_x1, obj_y2-obj_y1),width=2, group='rect')
-                dx, dy = (obj_x1-self.x1)-self.ref_x, (obj_y1-self.y1)-self.ref_y + 2*tb_space
+                    self.canvas.remove_group('rectOBJ') 
+                    Color(0,0,1,0.3, mode="rgba")
+                    Line(rectangle=(obj_x1, obj_y1 + tb_space + self.pos[1], obj_x2-obj_x1, obj_y2-obj_y1),width=2, group='rectOBJ')
+                dx, dy = (obj_x1-self.x1)-self.ref_x//2 + self.pos[0], (obj_y1-self.y1)-self.ref_y//2 + tb_space + self.pos[1]
                 self.x1, self.y1, self.x2, self.y2 = self.x1+dx, self.y1+dy, self.x2+dx, self.y2+dy
             #print((self.x1, self.y1, self.x2, self.y2))
             self.redraw()
@@ -123,7 +126,9 @@ if __name__=="__main__":
         
         def set_upscale_frame(self, *args):
             height, width = self.texture.height, self.texture.width
+            tb_space = (self.height - self.norm_image_size[1]) / 2
             start_flag = True
+            #print("Widget POS: " , self.pos, self.size)
             if not isinstance(self.frame, np.ndarray):
                 if self.frame == None: 
                     start_flag=False
@@ -132,10 +137,12 @@ if __name__=="__main__":
             self.frame = self.frame.reshape(height, width, 4)
             self.frame = cv2.cvtColor(self.frame, cv2.COLOR_RGBA2BGR)
             self.upscaleInstance.frame = self.frame
-            if type(self.start_pos)==tuple and type(self.end_pos)==tuple:
+            if  None not in ( self.x1, self.y1, self.x2, self.y2):
                 ups = self.upscaleInstance
-                x1, y1, x2, y2 = self.transform_coords(*self.start_pos, *self.end_pos, to_cv=True)
+                print ("TO UPSCALE", self.x1, self.y1, self.x2, self.y2 )
+                x1, y1, x2, y2 = self.transform_coords( self.x1-self.pos[0], self.y1 -tb_space - self.pos[1], self.x2- self.pos[0], self.y2 -tb_space - self.pos[1], to_cv=True)
                 ups.x1, ups.y1, ups.x2, ups.y2  = (int(x1), int(y1), int(x2), int(y2))
+                print ("TO UPSCALE", ups.x1, ups.y1, ups.x2, ups.y2 )
             if start_flag and not self.NN_FLAG:
                 t = td.Thread(target=self.upscaleInstance.run_upscale) 
                 t.start()

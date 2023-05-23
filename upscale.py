@@ -52,7 +52,7 @@ class UpscaleNN():
             if isinstance(self.res, np.ndarray):
                 im = self.res[:,:,::-1]
                 cv2.imshow('Upscaled',im)
-                #cv2.imshow('cutted',self.cut_img)
+                cv2.imshow('cutted',self.cut_img)
                 k = cv2.waitKey(1)
                 if k == 27:
                     cv2.destroyWindow('Upscaled')
