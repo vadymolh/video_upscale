@@ -139,10 +139,10 @@ if __name__=="__main__":
             self.upscaleInstance.frame = self.frame
             if  None not in ( self.x1, self.y1, self.x2, self.y2):
                 ups = self.upscaleInstance
-                print ("TO UPSCALE", self.x1, self.y1, self.x2, self.y2 )
+                #print ("TO UPSCALE", self.x1, self.y1, self.x2, self.y2 )
                 x1, y1, x2, y2 = self.transform_coords( self.x1-self.pos[0], self.y1 -tb_space - self.pos[1], self.x2- self.pos[0], self.y2 -tb_space - self.pos[1], to_cv=True)
                 ups.x1, ups.y1, ups.x2, ups.y2  = (int(x1), int(y1), int(x2), int(y2))
-                print ("TO UPSCALE", ups.x1, ups.y1, ups.x2, ups.y2 )
+                #print ("TO UPSCALE", ups.x1, ups.y1, ups.x2, ups.y2 )
             if start_flag and not self.NN_FLAG:
                 t = td.Thread(target=self.upscaleInstance.run_upscale) 
                 t.start()
@@ -166,9 +166,9 @@ if __name__=="__main__":
                 Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
             if not self.tracker_flag and None not in (x1, y1, x2, y2):
                 x1, y1, x2, y2 = self.transform_coords(*self.start_pos, *self.end_pos, to_cv=True) 
-                print("ZONE: ", x1, y1, x2, y2)
+                #print("ZONE: ", x1, y1, x2, y2)
                 obj_x1, obj_y1, obj_x2, obj_y2 =detectVehicleCoords(self.frame[y1:y2, x1:x2])
-                print("Vehicle",obj_x1, obj_y1, obj_x2, obj_y2)
+                #print("Vehicle",obj_x1, obj_y1, obj_x2, obj_y2)
                 obj_x1, obj_y1, obj_x2, obj_y2 = x1 + obj_x1, y1 + obj_y1, x1 + obj_x2, y1 + obj_y2
                 box = dlib.rectangle(obj_x1, obj_y1, obj_x2, obj_y2)
                 self.tracker.start_track(self.frame, box)
