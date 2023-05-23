@@ -20,6 +20,7 @@ if __name__=="__main__":
     from detection import detectVehicleCoords
     import dlib
     import math
+    import os
 
     class VideoExt(Video):
         #absolute coordinates of rectangle on Video
@@ -217,8 +218,8 @@ if __name__=="__main__":
 
             nn_button = Button(text='Choose NN', 
                                 size_hint = (.10, .10),
-                                pos_hint = {'x': 0.85, 'y': 0.55},)
-                                #on_press = self.choose_nn)
+                                pos_hint = {'x': 0.85, 'y': 0.55},
+                                on_press = self.choose_nn)
 
             clean_button = Button(text='Choose video', 
                                 size_hint = (.10, .10),
@@ -242,9 +243,11 @@ if __name__=="__main__":
             self.video_source = filechooser.open_file()
             self.video.source = self.video_source[0]
 
-        #def choose_nn(self, instance, VideoExt):
-            #self.nn = filechooser.open_file()
-            #self.upscaleInstance.path = self.nn[0]
+        def choose_nn(self, instance):
+            self.nn = filechooser.open_file()
+            self.nn = os.path.join(self.nn[0])
+            self.video.upscaleInstance.path = self.nn
+
         def play_video(self, instance):
             # play the video
             self.video.state = 'play'

@@ -11,8 +11,15 @@ def upscale_nn( im, path = "models/LapSRN_x4.pb"):
     sr = cv2.dnn_superres.DnnSuperResImpl_create()
     #cv2.imshow('NOT Upscaled', im)
     sr.readModel(path)
- 
-    sr.setModel("lapsrn",4)
+    filename =  path.split('/')[-1]
+    modelName, x = "", int(filename[filename.find('x')+1])
+    if "Lap" in filename:
+        modelName = "lapsrn"
+    elif "EDSR" in filename:
+        modelName = "edsr"
+    elif "ESPCN" in filename:
+        modelName = "espcn"
+    sr.setModel(modelName, x)
  
     result = sr.upsample(img)
     return result
@@ -44,8 +51,8 @@ class UpscaleNN():
         while 1:
             if isinstance(self.res, np.ndarray):
                 im = self.res[:,:,::-1]
-                #cv2.imshow('Upscaled',im)
-                cv2.imshow('cutted',self.cut_img)
+                cv2.imshow('Upscaled',im)
+                #cv2.imshow('cutted',self.cut_img)
                 k = cv2.waitKey(1)
                 if k == 27:
                     cv2.destroyWindow('Upscaled')
