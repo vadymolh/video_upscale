@@ -89,11 +89,6 @@ if __name__=="__main__":
             self.redraw()
             self.set_upscale_frame(self)
 
-        def on_texture(self, instance, texture, *args):
-            super(VideoExt, self).on_texture(instance, texture)
-            texture_coords = texture.uvpos[:]
-            # Print or use the texture_coords as needed
-            #print("Texture Coords:", texture_coords)
 
         def get_visible_image_touch_coords(self, touch):
             if not self.collide_point(*touch.pos):
@@ -165,15 +160,7 @@ if __name__=="__main__":
                 x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
                 Line(rectangle=(x1, y1, x2-x1, y2-y1),width=2, group='rect')
             if not self.tracker_flag and None not in (x1, y1, x2, y2):
-                x1, y1, x2, y2 = self.transform_coords(*self.start_pos, *self.end_pos, to_cv=True) 
-                #print("ZONE: ", x1, y1, x2, y2)
-                obj_x1, obj_y1, obj_x2, obj_y2 =detectVehicleCoords(self.frame[y1:y2, x1:x2])
-                #print("Vehicle",obj_x1, obj_y1, obj_x2, obj_y2)
-                obj_x1, obj_y1, obj_x2, obj_y2 = x1 + obj_x1, y1 + obj_y1, x1 + obj_x2, y1 + obj_y2
-                box = dlib.rectangle(obj_x1, obj_y1, obj_x2, obj_y2)
-                self.tracker.start_track(self.frame, box)
-                self.tracker_flag = True
-                self.ref_x, self.ref_y = int(math.fabs(obj_x1-x1)), int(math.fabs(obj_y2-y2))
+                self.reload_tracker()
 
         def transform_coords(self, x1, y1, x2, y2, to_cv=False, to_kivy=False):
             if to_cv:
@@ -185,7 +172,22 @@ if __name__=="__main__":
                 x2, y2 =  self.get_texture_coords((x2, y2))
                 return x1, y2, x2, y1
             return x1, y1, x2, y2
-               
+
+        def reload_tracker(self):
+            lr_space = (self.width - self.norm_image_size[0]) / 2  # empty space in Image widget left and right of actual image
+            tb_space = (self.height - self.norm_image_size[1]) / 2
+            x1, y1, x2, y2   = self.x1, self.y1, self.x2, self.y2
+            x1, y1, x2, y2 = self.transform_coords(self.x1-self.pos[0], self.y1 -tb_space - self.pos[1], self.x2- self.pos[0], self.y2 -tb_space - self.pos[1], to_cv=True) 
+            vehicle = detectVehicleCoords(self.frame[y1:y2, x1:x2])
+            if not vehicle:
+                return
+            obj_x1, obj_y1, obj_x2, obj_y2 = vehicle
+            obj_x1, obj_y1, obj_x2, obj_y2 = x1 + obj_x1, y1 + obj_y1, x1 + obj_x2, y1 + obj_y2
+            box = dlib.rectangle(obj_x1, obj_y1, obj_x2, obj_y2)
+            self.tracker.start_track(self.frame, box)
+            self.tracker_flag = True
+            self.ref_x, self.ref_y = int(math.fabs(obj_x1-x1)), int(math.fabs(obj_y2-y2))
+
     class VideoApp(App):
         def build(self):
             # create a Video widget to display the video filechooser.video_source
@@ -211,7 +213,9 @@ if __name__=="__main__":
             
             tracking_button = Button(text='Tracking', 
                                 size_hint = (.10, .10),
-                                pos_hint = {'x': 0.75, 'y': 0.01},)
+                                pos_hint = {'x': 0.75, 'y': 0.01},
+                                on_press = self.toggle_tracker,
+                                background_color= [0,1,0,1])
             
             play_button = Button(text='Play', 
                                 size_hint = (.10, .10),
@@ -245,7 +249,15 @@ if __name__=="__main__":
             # bind the state of the Video widget to update the play/pause button
             self.video.bind(state=self.update_play_pause_button)
             return layout
-        
+        def toggle_tracker(self, instance):
+            self.video.tracker_flag = not self.video.tracker_flag
+            if self.video.tracker_flag:
+                instance.background_color= [0,1,0,1]
+                instance.text = "Tracking"
+                self.video.reload_tracker()
+            else:
+                instance.background_color= [1,0,0,1] 
+                instance.text = "Tracking OFF"
         def choose_video(self, instance):
             self.video_source = filechooser.open_file()
             self.video.source = self.video_source[0]

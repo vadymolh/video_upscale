@@ -2,7 +2,10 @@ import cv2
 
 
 def detectVehicleCoords(image)->tuple:
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    try:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    except cv2.error:
+        return False
     image = cv2.GaussianBlur(image, (3, 3), 0)
     
     # Apply the Otsu thresholding to get the optimal threshold value
@@ -34,5 +37,5 @@ def detectVehicleCoords(image)->tuple:
         #print("Coordinates of rectangle:", (x, y, w, h))
     else:
         print ("no contours")
-        return (0,0,0,0)
+        return False
     return x,y, x+w, y+h
